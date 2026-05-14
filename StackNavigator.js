@@ -27,7 +27,7 @@ import {
 
 const RootNavigator = () => {
   const [route, setRoute] = useState(false);
-  console.log('route===>', route);
+  //console.log('route===>', route)
   const [isLoading, setIsLoading] = useState(false);
   const [responseToPushPermition, setResponseToPushPermition] = useState(false);
   ////('Дозвіл на пуши прийнято? ===>', responseToPushPermition);
@@ -41,7 +41,7 @@ const RootNavigator = () => {
   const [oneSignalId, setOneSignalId] = useState(null);
   //console.log('oneSignalId==>', oneSignalId);
   const [appsUid, setAppsUid] = useState(null);
-  const [sab1, setSab1] = useState();
+  const [sab1, setSab1] = useState(null);
   const [atribParam, setAtribParam] = useState(null);
   //const [pid, setPid] = useState();
   console.log('atribParam==>', atribParam);
@@ -55,12 +55,14 @@ const RootNavigator = () => {
   const [adServicesAtribution, setAdServicesAtribution] = useState(null);
   //const [adServicesKeywordId, setAdServicesKeywordId] = useState(null);
   const [isDataReady, setIsDataReady] = useState(false);
+  console.log('isDataReady==>', isDataReady);
   const [aceptTransperency, setAceptTransperency] = useState(false);
   const [completeLink, setCompleteLink] = useState(false);
   const [finalLink, setFinalLink] = useState('');
   //console.log('completeLink==>', completeLink);
   //console.log('finalLink==>', finalLink);
   const [isInstallConversionDone, setIsInstallConversionDone] = useState(false);
+  console.log('isInstallConversionDone==>', isInstallConversionDone);
   const [pushOpenWebview, setPushOpenWebview] = useState(false);
   //console.log('pushOpenWebview==>', pushOpenWebview);
   const [timeStampUserId, setTimeStampUserId] = useState(false);
@@ -69,19 +71,9 @@ const RootNavigator = () => {
   const [checkAsaData, setCheckAsaData] = useState(null);
   const [cloacaPass, setCloacaPass] = useState(null);
   console.log('cloacaPass==>', cloacaPass);
-  const [customUserAgent, setCustomUserAgent] = useState(null);
-
-  const pushOpenWebviewRef = useRef(false);
 
   const INITIAL_URL = `https://safe-zone-team.space/`;
   const URL_IDENTIFAIRE = `Rn8NlmUw`;
-
-  const ONESIGNAL_KEY = `7c7543ed-d189-4b98-a6a7-0fdb359d7ffa`;
-
-  const TARGET_DATA = new Date(2026, 4, 1, 8, 8, 0);
-
-  const APS_DEV_KEY = 'nF4HazWPNSFSsk4bhni5uk';
-  const APP_ID = '6764467553';
 
   useEffect(() => {
     //const targetData = TARGET_DATA; //дата з якої поч працювати webView
@@ -90,7 +82,6 @@ const RootNavigator = () => {
     //if (currentData <= targetData) {
     requestTrackingPermission();
     setAceptTransperency(true);
-    setIdfa('00000000-0000-0000-0000-000000000000');
     //console.log('ATT статус:', trackingStatus);
     //}
   }, []);
@@ -107,14 +98,14 @@ const RootNavigator = () => {
 
   useEffect(() => {
     const finalizeProcess = async () => {
-      if (isDataReady && isInstallConversionDone) {
+      if (isDataReady) {
         await generateLink(); // Викликати generateLink, коли всі дані готові
         console.log('Фінальна лінка сформована!');
       }
     };
 
     finalizeProcess();
-  }, [isDataReady, isInstallConversionDone]);
+  }, [isDataReady]);
 
   // uniq_visit
   const checkUniqVisit = async () => {
@@ -334,14 +325,13 @@ const RootNavigator = () => {
     }
   };
 
-  useEffect(() => {
-    // Remove this method to stop OneSignal Debugging
-    OneSignal.Debug.setLogLevel(LogLevel.Verbose);
+  // Remove this method to stop OneSignal Debugging
+  OneSignal.Debug.setLogLevel(LogLevel.Verbose);
 
-    // OneSignal ініціалізація
-    OneSignal.initialize(ONESIGNAL_KEY);
-    //OneSignal.Debug.setLogLevel(OneSignal.LogLevel.Verbose);
-  }, []);
+  // OneSignal ініціалізація
+  //OneSignal.initialize('137e39e3-aa53-45c0-adb7-fb2eccbd49b1');
+  OneSignal.initialize('7c7543ed-d189-4b98-a6a7-0fdb359d7ffa');
+  //OneSignal.Debug.setLogLevel(OneSignal.LogLevel.Verbose);
 
   // Встановлюємо цей ID як OneSignal External ID
   useEffect(() => {
@@ -362,48 +352,38 @@ const RootNavigator = () => {
     // Додаємо слухач подій
     const handleNotificationClick = async event => {
       if (pushOpenWebViewOnce.current) {
+        // Уникаємо повторної відправки івента
         return;
       }
 
-      pushOpenWebViewOnce.current = true;
+      let storedTimeStampUserId = await AsyncStorage.getItem('timeStampUserId');
+      //console.log('storedTimeStampUserId', storedTimeStampUserId);
 
-      try {
-        const storedTimeStampUserId = await AsyncStorage.getItem(
-          'timeStampUserId',
-        );
-
-        // ВАЖЛИВО: ref оновлюється одразу, state — ні
-        pushOpenWebviewRef.current = true;
+      // Виконуємо fetch тільки коли timeStampUserId є
+      if (event.notification.launchURL) {
         setPushOpenWebview(true);
-
-        // Якщо лінка вже була готова — скидаємо, щоб перегенерувати з yhugh=true
-        setCompleteLink(false);
-
-        const eventName = event?.notification?.launchURL
-          ? 'push_open_browser'
-          : 'push_open_webview';
-
-        const pushEventUrl = `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=${eventName}&jthrhg=${
-          storedTimeStampUserId || ''
-        }`;
-
-        console.log('OneSignal push event url =>', pushEventUrl);
-
-        fetch(pushEventUrl).catch(error => {
-          console.log('Push event fetch error =>', error);
-        });
-
-        // Якщо всі дані вже готові — одразу перегенеруємо лінку
-        if (isDataReady && uid) {
-          await generateLink(true);
-        }
-      } catch (error) {
-        console.log('handleNotificationClick error =>', error);
-      } finally {
-        setTimeout(() => {
-          pushOpenWebViewOnce.current = false;
-        }, 2500);
+        fetch(
+          `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_browser&jthrhg=${storedTimeStampUserId}`,
+        );
+        //console.log('Івент push_open_browser OneSignal');
+        //console.log(
+        //  `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_browser&jthrhg=${storedTimeStampUserId}`,
+        //);
+      } else {
+        setPushOpenWebview(true);
+        fetch(
+          `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_webview&jthrhg=${storedTimeStampUserId}`,
+        );
+        //console.log('Івент push_open_webview OneSignal');
+        //console.log(
+        //  `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_webview&jthrhg=${storedTimeStampUserId}`,
+        //);
       }
+
+      pushOpenWebViewOnce.current = true; // Блокування повторного виконання
+      setTimeout(() => {
+        pushOpenWebViewOnce.current = false; // Зняття блокування через певний час
+      }, 2500); // Затримка, щоб уникнути подвійного кліку
     };
 
     OneSignal.Notifications.addEventListener('click', handleNotificationClick);
@@ -426,8 +406,10 @@ const RootNavigator = () => {
       await new Promise((resolve, reject) => {
         appsFlyer.initSdk(
           {
-            devKey: APS_DEV_KEY,
-            appId: APP_ID,
+            //devKey: 'FnAGoKcAsbcSxg8XXDRVWY',
+            //appId: '6760185597',
+            devKey: 'nF4HazWPNSFSsk4bhni5uk',
+            appId: '6764467553',
             isDebug: true,
             onInstallConversionDataListener: true,
             onDeepLinkListener: true,
@@ -458,8 +440,10 @@ const RootNavigator = () => {
       await new Promise((resolve, reject) => {
         appsFlyer.initSdk(
           {
-            devKey: APS_DEV_KEY,
-            appId: APP_ID,
+            //devKey: 'FnAGoKcAsbcSxg8XXDRVWY',
+            //appId: '6760185597',
+            devKey: 'nF4HazWPNSFSsk4bhni5uk',
+            appId: '6764467553',
             isDebug: true,
             onInstallConversionDataListener: true,
             onDeepLinkListener: true,
@@ -577,38 +561,32 @@ const RootNavigator = () => {
   ///////// IDFA
   const fetchIdfa = async () => {
     try {
+      //console.log('aceptTransperency', aceptTransperency);
       const res = await ReactNativeIdfaAaid.getAdvertisingInfo();
-
+      //const res = true;
       if (!res.isAdTrackingLimited) {
         setIdfa(res.id);
-
-        //Settings.setAdvertiserTrackingEnabled(true);
-
-        //setTimeout(() => {
-        setAceptTransperency(true);
-        //}, 1500);
-        return true;
+        setTimeout(() => {
+          setAceptTransperency(true);
+        }, 1500);
+        //console.log('aceptTransperency', aceptTransperency);
+        //console.log('ЗГОДА!!!!!!!!!');
       } else {
-        setIdfa('00000000-0000-0000-0000-000000000000');
-
-        //Settings.setAdvertiserTrackingEnabled(false);
-
-        //setTimeout(() => {
-        setAceptTransperency(true);
-        //}, 2500);
+        //console.log('Ad tracking is limited');
+        setIdfa('00000000-0000-0000-0000-000000000000'); //true
+        //setIdfa(null);
+        fetchIdfa();
+        //Alert.alert('idfa', idfa);
+        setTimeout(() => {
+          setAceptTransperency(true);
+        }, 2500);
+        //console.log('aceptTransperency', aceptTransperency);
         console.log('НЕ ЗГОДА!!!!!!!!!');
-
-        return false;
       }
     } catch (err) {
+      //console.log('err', err);
       setIdfa(null);
-
-      //Settings.setAdvertiserTrackingEnabled(false);
-
-      setAceptTransperency(true);
-      console.log('Помилка отримання IDFA:', err);
-
-      return false;
+      await fetchIdfa(); //???
     }
   };
 
@@ -623,29 +601,24 @@ const RootNavigator = () => {
     const checkUrl = `${INITIAL_URL}${URL_IDENTIFAIRE}`;
     //console.log('checkUrl==========+>', checkUrl);
 
-    const targetData = TARGET_DATA; //дата з якої поч працювати webView
+    const targetData = new Date(2026, 2, 20, 8, 8, 0); //дата з якої поч працювати webView
     const currentData = new Date(); //текущая дата
 
     if (currentData <= targetData) {
       setRoute(false);
-      setCompleteLink(true);
       return;
     }
 
     const fetchCloaca = async () => {
+      const deviceInfo = {
+        diviceUserAgent: DeviceInfo.getUserAgent(),
+      };
+
       try {
-        const userAgent = await DeviceInfo.getUserAgent();
-        const systemVersion = DeviceInfo.getSystemVersion();
-        const deviceModel = DeviceInfo.getModel();
-
-        const customUserAgent = `${userAgent} ${deviceModel} Safari/604.1`;
-
-        setCustomUserAgent(customUserAgent);
-
         const r = await fetch(checkUrl, {
           method: 'GET',
           headers: {
-            'User-Agent': customUserAgent,
+            'User-Agent': `${deviceInfo.diviceUserAgent}`,
           },
         });
 
@@ -674,8 +647,6 @@ const RootNavigator = () => {
         `${INITIAL_URL}${URL_IDENTIFAIRE}?${URL_IDENTIFAIRE}=1`,
         idfa ? `idfa=${idfa}` : '',
         appsUid ? `uid=${appsUid}` : '',
-        customerUserId ? `customerUserId=${customerUserId}` : '',
-        idfv ? `idfv=${idfv}` : '',
         oneSignalId ? `oneSignalId=${oneSignalId}` : '',
         `jthrhg=${timeStampUserId}`,
       ]
@@ -733,19 +704,41 @@ const RootNavigator = () => {
     const timer = setTimeout(() => {
       if (!completeLink) {
         console.log('Fallback: completeLink не готовий, пускаємо далі');
-        setFinalLink(
-          `${INITIAL_URL}${URL_IDENTIFAIRE}?${URL_IDENTIFAIRE}=1&idfa=${
-            idfa || '00000000-0000-0000-0000-000000000000'
-          }&idfv=${idfv || ''}&jthrhg=${timeStampUserId || ''}&oneSignalId=${
-            oneSignalId || ''
-          }&uid=${appsUid || ''}`,
-        );
+        const baseUrl = [
+          `${INITIAL_URL}${URL_IDENTIFAIRE}?${URL_IDENTIFAIRE}=1`,
+          idfa ? `idfa=${idfa}` : '',
+          appsUid ? `uid=${appsUid}` : '',
+          oneSignalId ? `oneSignalId=${oneSignalId}` : '',
+          `jthrhg=${timeStampUserId}`,
+        ]
+          .filter(Boolean)
+          .join('&');
+
+        let additionalParams = '';
+
+        // Якщо sab1 undefined або пустий, встановлюємо subId1=atribParam
+        additionalParams = `${
+          atribParam ? `subId1=${atribParam}` : ''
+        }&checkData=${checkAsaData}`;
+
+        console.log('additionalParams====>', additionalParams);
+        // Формування фінального лінку
+        const product = `${baseUrl}&${additionalParams}${
+          pushOpenWebview ? `&yhugh=${pushOpenWebview}` : ''
+        }`;
+        //(!addPartToLinkOnce ? `&yhugh=true` : ''); pushOpenWebview && '&yhugh=true'
+        console.log('Фінальна лінка сформована');
+
+        // Зберігаємо лінк в стейт
+        setFinalLink(product);
+
+        // Встановлюємо completeLink у true
         setCompleteLink(true);
       }
-    }, 9000);
+    }, 14000);
 
     return () => clearTimeout(timer);
-  }, [completeLink, idfa, idfv, timeStampUserId]);
+  }, [completeLink, idfa, timeStampUserId]);
 
   ///////// Route
   const Route = ({ isFatch }) => {
@@ -763,7 +756,7 @@ const RootNavigator = () => {
               responseToPushPermition,
               product: finalLink,
               timeStampUserId: timeStampUserId,
-              customUserAgent: customUserAgent,
+              //customUserAgent: customUserAgent,
             }}
             name="ProductScreen"
             component={ProductScreen}
@@ -798,7 +791,7 @@ const RootNavigator = () => {
   useEffect(() => {
     setTimeout(() => {
       setIsLoading(true);
-    }, 5000);
+    }, 7000);
   }, []);
 
   {

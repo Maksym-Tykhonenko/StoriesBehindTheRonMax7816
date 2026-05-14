@@ -494,20 +494,7 @@ const ProductScreen = ({ navigation, route }) => {
       </View>
     );
   };
-  {
-    /** 
-  // кастомний юзерагент
-  const deviceInfo = {
-    deviceBrand: DeviceInfo.getBrand(),
-    deviceId: DeviceInfo.getDeviceId(),
-    deviceModel: DeviceInfo.getModel(),
-    deviceSystemName: DeviceInfo.getSystemName(),
-    deviceSystemVersion: DeviceInfo.getSystemVersion(),
-  };
 
-  const customUserAgent = `Mozilla/5.0 (${deviceInfo.deviceSystemName}; ${deviceInfo.deviceModel}) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1`;
-*/
-  }
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#191d24' }}>
       {isLoading && <LoadingIndicatorView />}

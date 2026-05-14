@@ -80,7 +80,7 @@ const RootNavigator = () => {
 
   const ONESIGNAL_KEY = '7c7543ed-d189-4b98-a6a7-0fdb359d7ffa';
 
-  const TARGET_DATA = new Date(2026, 4, 1, 8, 8, 0);
+  const TARGET_DATA = new Date(2026, 4, 16, 8, 8, 0);
 
   useEffect(() => {
     //const targetData = TARGET_DATA; //дата з якої поч працювати webView

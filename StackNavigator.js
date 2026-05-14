@@ -105,14 +105,14 @@ const RootNavigator = () => {
 
   useEffect(() => {
     const finalizeProcess = async () => {
-      if (isDataReady) {
+      if (isDataReady && isInstallConversionDone) {
         await generateLink(); // Викликати generateLink, коли всі дані готові
         console.log('Фінальна лінка сформована!');
       }
     };
 
     finalizeProcess();
-  }, [isDataReady]);
+  }, [isDataReady, isInstallConversionDone]);
 
   // uniq_visit
   const checkUniqVisit = async () => {
@@ -561,6 +561,7 @@ const RootNavigator = () => {
             setCheckApsData(JSON.stringify(res.data));
           } else if (res.data.af_status === 'Organic') {
             //await fetchAdServicesAttributionData();
+            setSab1('test1_test2_test3_test4'); //test1_test2_test3
             console.log('Organic');
           }
         } else {

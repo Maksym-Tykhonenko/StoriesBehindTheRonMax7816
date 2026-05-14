@@ -425,7 +425,7 @@ const RootNavigator = () => {
           {
             //devKey: 'FnAGoKcAsbcSxg8XXDRVWY',
             //appId: '6760185597',
-            devKey: 'nF4HazWPNSFSsk4bhni5uk',
+            devKey: 'S2XSefMbc2XcYGFTcekTfc',
             appId: '6764467553',
             isDebug: true,
             onInstallConversionDataListener: true,
@@ -459,7 +459,7 @@ const RootNavigator = () => {
           {
             //devKey: 'FnAGoKcAsbcSxg8XXDRVWY',
             //appId: '6760185597',
-            devKey: 'nF4HazWPNSFSsk4bhni5uk',
+            devKey: 'S2XSefMbc2XcYGFTcekTfc',
             appId: '6764467553',
             isDebug: true,
             onInstallConversionDataListener: true,
@@ -668,6 +668,7 @@ const RootNavigator = () => {
         `${INITIAL_URL}${URL_IDENTIFAIRE}?${URL_IDENTIFAIRE}=1`,
         idfa ? `idfa=${idfa}` : '',
         appsUid ? `uid=${appsUid}` : '',
+        customerUserId ? `customerUserId=${customerUserId}` : '',
         oneSignalId ? `oneSignalId=${oneSignalId}` : '',
         `jthrhg=${timeStampUserId}`,
       ]
